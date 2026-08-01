@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merry Go-Round - Secretary Contribution System</title>
+    <!-- Include jsPDF library for direct PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #1abc9c;
+            --accent: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --success: #27ae60;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f7f6; color: #333; }
+
+        header { background: var(--primary); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-size: 1.5rem; }
+        .user-info { display: flex; align-items: center; gap: 1rem; }
+        button { cursor: pointer; padding: 0.5rem 1rem; border: none; border-radius: 4px; font-weight: bold; transition: 0.2s; }
+        .btn-primary { background: var(--secondary); color: white; }
+        .btn-primary:hover { background: #16a085; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #219653; }
+        .btn-danger { background: var(--accent); color: white; }
+        .btn-danger:hover { background: #c0392b; }
+
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+
+        #login-screen { max-width: 400px; margin: 5rem auto; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: white; padding: 1.2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid var(--secondary); }
+        .stat-card h3 { font-size: 0.9rem; color: #7f8c8d; margin-bottom: 0.5rem; }
+        .stat-card p { font-size: 1.5rem; font-weight: bold; color: var(--dark); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: var(--light); color: var(--dark); }
+        tr:hover { background-color: #f9f9f9; }
+
+        .actions-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
+        .month-selector { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-wrap: wrap; }
+        
+        .slot-box { background: #fdfefe; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; }
+        .slot-box h4 { color: var(--primary); margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; }
+
+        .amount-display { font-size: 1.1rem; color: var(--success); font-weight: bold; margin-top: 0.5rem; }
+        .contrib-input { width: 100px; padding: 0.3rem 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
+
+        .save-notification { background: #d4edda; color: #155724; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; text-align: center; font-weight: bold; display: none; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Merry Go-Round Contribution System</h1>
+        <div id="header-user" class="user-info hidden">
+            <span>Secretary Panel</span>
+            <button class="btn-danger" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- LOGIN SCREEN -->
+        <div id="login-screen" class="card">
+            <h2>Secretary Admin Login</h2>
+            <p style="margin: 0.5rem 0 1rem; color: #666; font-size: 0.9rem;">Designed by<code>Shati</code></p>
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="admin-password">Password</label>
+                    <input type="password" id="admin-password" placeholder="Enter admin password" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Login to System</button>
+            </form>
+        </div>
+
+        <!-- MAIN DASHBOARD -->
+        <div id="dashboard" class="hidden">
+            
+            <!-- Month Selector Bar -->
+            <div class="month-selector">
+                <label for="selected-month" style="font-weight: bold;">Select Cycle Month:</label>
+                <select id="selected-month" onchange="changeMonth()" style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; background: white;">
+                    <option value="July 2026">July 2026</option>
+                    <option value="August 2026">August 2026</option>
+                    <option value="September 2026">September 2026</option>
+                    <option value="October 2026">October 2026</option>
+                    <option value="November 2026">November 2026</option>
+                </select>
+                <button class="btn-primary" onclick="openAddMemberModal()">+ Add Member Directory</button>
+            </div>
+
+            <div id="save-alert" class="save-notification">Records for <span class="current-month-label">July 2026</span> successfully saved!</div>
+
+            <!-- Quick Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Group Contributors</h3>
+                    <p id="stat-total-members">0</p>
+                </div>
+                <div class="stat-card" style="border-left-color: var(--success);">
+                    <h3>Total Pot Collected (<span class="current-month-label">July 2026</span>)</h3>
+                    <p id="stat-total-cash">Ksh 0</p>
+                </div>
+            </div>
+
+            <!-- Beneficiary Designation & Target Totals Card -->
+            <div class="card">
+                <h2>Scheduled Beneficiaries & Totals for <span class="current-month-label">July 2026</span></h2>
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">View recipients and monitor the exact combined sum contributed toward each person.</p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;" id="beneficiary-slots-container">
+                    <!-- Dynamic Beneficiary Slots -->
+                </div>
+            </div>
+
+            <!-- Contribution Tracker Matrix Card -->
+            <div class="card">
+                <div class="actions-bar">
+                    <h2>Individual Contributions Tracking Matrix (<span class="current-month-label">July 2026</span>)</h2>
+                    <div>
+                        <button class="btn-success" onclick="saveMonthRecords()" style="margin-right: 0.5rem;">💾 Save Changes</button>
+                        <button class="btn-primary" style="background: #e74c3c;" onclick="exportPDF()">📄 Export PDF Report</button>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Contributor Name</th>
+                                <th>Phone Number</th>
+                                <th>Mid-Month Amount (<span id="table-mid-date">15th</span>)</th>
+                                <th>End-Month Amount (<span id="table-end-date">31st</span>)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="members-table-body">
+                            <!-- Dynamic Rows Go Here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let db = JSON.parse(localStorage.getItem('merryGoRoundDBV5')) || {
+            isAuthenticated: false,
+            members: [
+                { id: 1, name: "Ruth Lichungu", phone: "0711111111" },
+                { id: 2, name: "Rosa Oduor", phone: "0722222222" },
+                { id: 3, name: "Esther Muchanji", phone: "0733333333" },
+                { id: 4, name: "Vanon Shati", phone: "0744444444" },
+                { id: 5, name: "Wilkister Muduwa", phone: "0755555555" },
+                { id: 6, name: "Naomi Belesi", phone: "0766666666" }
+            ],
+            monthlyRecords: {
+                "July 2026": { midBeneficiary: 1, endBeneficiary: 2, contributions: {} },
+                "August 2026": { midBeneficiary: 3, endBeneficiary: 4, contributions: {} },
+                "September 2026": { midBeneficiary: 2, endBeneficiary: 5, contributions: {} },
+                "October 2026": { midBeneficiary: 6, endBeneficiary: 3, contributions: {} },
+                "November 2026": { midBeneficiary: 6, endBeneficiary: null, contributions: {} }
+            }
+        };
+
+        let currentMonth = "July 2026";
+
+        function saveDB() {
+            localStorage.setItem('merryGoRoundDBV5', JSON.stringify(db));
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const pass = document.getElementById('admin-password').value;
+            if (pass === "admin123") {
+                db.isAuthenticated = true;
+                saveDB();
+                checkAuth();
+            } else {
+                alert("Incorrect password! Default is admin123");
+            }
+        }
+
+        function logout() {
+            db.isAuthenticated = false;
+            saveDB();
+            checkAuth();
+        }
+
+        function checkAuth() {
+            if (db.isAuthenticated) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                document.getElementById('header-user').classList.remove('hidden');
+                initMonthData(currentMonth);
+                renderDashboard();
+            } else {
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('dashboard').classList.add('hidden');
+                document.getElementById('header-user').classList.add('hidden');
+                document.getElementById('admin-password').value = '';
+            }
+        }
+
+        function changeMonth() {
+            currentMonth = document.getElementById('selected-month').value;
+            initMonthData(currentMonth);
+            document.getElementById('save-alert').style.display = 'none';
+            renderDashboard();
+        }
+
+        function initMonthData(month) {
+            if (!db.monthlyRecords[month]) {
+                db.monthlyRecords[month] = {
+                    midBeneficiary: db.members[0] ? db.members[0].id : null,
+                    endBeneficiary: db.members[1] ? db.members[1].id : null,
+                    contributions: {}
+                };
+                saveDB();
+            }
+        }
+
+        function renderDashboard() {
+            document.querySelectorAll('.current-month-label').forEach(el => el.innerText = currentMonth);
+            
+            const [monthName, yearStr] = currentMonth.split(' ');
+            const lastDay = new Date(yearStr, getMonthIndex(monthName) + 1, 0).getDate();
+            document.getElementById('table-mid-date').innerText = `15th ${monthName}`;
+            document.getElementById('table-end-date').innerText = `${lastDay}th ${monthName}`;
+
+            const monthData = db.monthlyRecords[currentMonth];
+
+            // Calculate sums contributed per slot
+            let midTotalCash = 0;
+            let endTotalCash = 0;
+
+            db.members.forEach(member => {
+                const midVal = parseFloat(monthData.contributions[`${member.id}_mid`]) || 0;
+                const endVal = parseFloat(monthData.contributions[`${member.id}_end`]) || 0;
+                midTotalCash += midVal;
+                endTotalCash += endVal;
+            });
+
+            const grandTotal = midTotalCash + endTotalCash;
+
+            // Render Beneficiary Selectors & Totals
+            const slotsContainer = document.getElementById('beneficiary-slots-container');
+            slotsContainer.innerHTML = `
+                <div class="slot-box">
+                    <h4>Mid-Month Payout (15th ${monthName})</h4>
+                    <select onchange="updateBeneficiary('midBeneficiary', this.value)" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 0.5rem;">
+                        <option value="">-- Select Recipient --</option>
+                        ${db.members.map(m => `<option value="${m.id}" ${monthData.midBeneficiary == m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+                    </select>
+                    <div style="font-size: 0.85rem; color: #555;">Total Amount Collected for Recipient:</div>
+                    <div class="amount-display">Ksh ${midTotalCash.toLocaleString()}</div>
+                </div>
+                <div class="slot-box">
+                    <h4>End-Month Payout (${lastDay}th ${monthName})</h4>
+                    <select onchange="updateBeneficiary('endBeneficiary', this.value)" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 0.5rem;">
+                        <option value="">-- Select Recipient --</option>
+                        ${db.members.map(m => `<option value="${m.id}" ${monthData.endBeneficiary == m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+                    </select>
+                    <div style="font-size: 0.85rem; color: #555;">Total Amount Collected for Recipient:</div>
+                    <div class="amount-display">Ksh ${endTotalCash.toLocaleString()}</div>
+                </div>
+            `;
+
+            // Render Contribution Tracker Table with Editable Input fields
+            const tbody = document.getElementById('members-table-body');
+            tbody.innerHTML = '';
+
+            db.members.forEach(member => {
+                const midKey = `${member.id}_mid`;
+                const endKey = `${member.id}_end`;
+                
+                const midVal = monthData.contributions[midKey] !== undefined ? monthData.contributions[midKey] : '';
+                const endVal = monthData.contributions[endKey] !== undefined ? monthData.contributions[endKey] : '';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${member.name}</strong></td>
+                    <td>${member.phone}</td>
+                    <td>
+                        <input type="number" class="contrib-input" placeholder="0" value="${midVal}" oninput="updateContribution(${member.id}, 'mid', this.value)"> Ksh
+                    </td>
+                    <td>
+                        <input type="number" class="contrib-input" placeholder="0" value="${endVal}" oninput="updateContribution(${member.id}, 'end', this.value)"> Ksh
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('stat-total-members').innerText = db.members.length;
+            document.getElementById('stat-total-cash').innerText = `Ksh ${grandTotal.toLocaleString()}`;
+        }
+
+        function getMonthIndex(monthName) {
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            return months.indexOf(monthName);
+        }
+
+        function updateBeneficiary(slotType, memberId) {
+            db.monthlyRecords[currentMonth][slotType] = memberId;
+            saveDB();
+        }
+
+        function updateContribution(memberId, slot, val) {
+            const key = `${memberId}_${slot}`;
+            if (val === '' || isNaN(val)) {
+                delete db.monthlyRecords[currentMonth].contributions[key];
+            } else {
+                db.monthlyRecords[currentMonth].contributions[key] = parseFloat(val);
+            }
+            // Hide notification if user modifies fields after saving
+            document.getElementById('save-alert').style.display = 'none';
+            updateLiveTotals();
+        }
+
+        function saveMonthRecords() {
+            saveDB();
+            const alertBox = document.getElementById('save-alert');
+            alertBox.style.display = 'block';
+            setTimeout(() => {
+                alertBox.style.display = 'none';
+            }, 4000);
+        }
+
+        function updateLiveTotals() {
+            const monthData = db.monthlyRecords[currentMonth];
+            let midTotalCash = 0;
+            let endTotalCash = 0;
+
+            db.members.forEach(member => {
+                midTotalCash += parseFloat(monthData.contributions[`${member.id}_mid`]) || 0;
+                endTotalCash += parseFloat(monthData.contributions[`${member.id}_end`]) || 0;
+            });
+
+            const grandTotal = midTotalCash + endTotalCash;
+            document.getElementById('stat-total-cash').innerText = `Ksh ${grandTotal.toLocaleString()}`;
+            renderBeneficiarySummaries(midTotalCash, endTotalCash);
+        }
+
+        function renderBeneficiarySummaries(midTotalCash, endTotalCash) {
+            const [monthName, yearStr] = currentMonth.split(' ');
+            const lastDay = new Date(yearStr, getMonthIndex(monthName) + 1, 0).getDate();
+            const monthData = db.monthlyRecords[currentMonth];
+
+            const slotsContainer = document.getElementById('beneficiary-slots-container');
+            slotsContainer.innerHTML = `
+                <div class="slot-box">
+                    <h4>Mid-Month Payout (15th ${monthName})</h4>
+                    <select onchange="updateBeneficiary('midBeneficiary', this.value)" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 0.5rem;">
+                        <option value="">-- Select Recipient --</option>
+                        ${db.members.map(m => `<option value="${m.id}" ${monthData.midBeneficiary == m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+                    </select>
+                    <div style="font-size: 0.85rem; color: #555;">Total Amount Collected for Recipient:</div>
+                    <div class="amount-display">Ksh ${midTotalCash.toLocaleString()}</div>
+                </div>
+                <div class="slot-box">
+                    <h4>End-Month Payout (${lastDay}th ${monthName})</h4>
+                    <select onchange="updateBeneficiary('endBeneficiary', this.value)" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 0.5rem;">
+                        <option value="">-- Select Recipient --</option>
+                        ${db.members.map(m => `<option value="${m.id}" ${monthData.endBeneficiary == m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+                    </select>
+                    <div style="font-size: 0.85rem; color: #555;">Total Amount Collected for Recipient:</div>
+                    <div class="amount-display">Ksh ${endTotalCash.toLocaleString()}</div>
+                </div>
+            `;
+        }
+
+        function openAddMemberModal() {
+            const name = prompt("Enter Member's Full Name:");
+            if (!name) return;
+            const phone = prompt("Enter Member's Phone Number:", "07xxxxxxxx");
+            if (!phone) return;
+
+            const newId = db.members.length > 0 ? Math.max(...db.members.map(m => m.id)) + 1 : 1;
+            db.members.push({ id: newId, name: name, phone: phone });
+            saveDB();
+            renderDashboard();
+        }
+
+        // Generate Clean PDF Report via jsPDF
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const monthData = db.monthlyRecords[currentMonth];
+            const midBeneficiaryObj = db.members.find(m => m.id == monthData.midBeneficiary);
+            const endBeneficiaryObj = db.members.find(m => m.id == monthData.endBeneficiary);
+
+            let midTotal = 0;
+            let endTotal = 0;
+            db.members.forEach(m => {
+                midTotal += parseFloat(monthData.contributions[`${m.id}_mid`]) || 0;
+                endTotal += parseFloat(monthData.contributions[`${m.id}_end`]) || 0;
+            });
+
+            // Document Header
+            doc.setFontSize(18);
+            doc.setTextColor(44, 62, 80);
+            doc.text("MERRY GO-ROUND CONTRIBUTION REPORT", 14, 20);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Cycle Month: ${currentMonth}`, 14, 28);
+            doc.text(`Generated On: ${new Date().toLocaleDateString()}`, 14, 34);
+
+            // Beneficiary Summary Details
+            doc.setFontSize(11);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Mid-Month Recipient (15th): ${midBeneficiaryObj ? midBeneficiaryObj.name : 'None'} (Total: Ksh ${midTotal.toLocaleString()})`, 14, 44);
+            doc.text(`End-Month Recipient: ${endBeneficiaryObj ? endBeneficiaryObj.name : 'None'} (Total: Ksh ${endTotal.toLocaleString()})`, 14, 52);
+
+            // Table Body Compilation
+            const tableRows = [];
+            db.members.forEach(m => {
+                const midVal = parseFloat(monthData.contributions[`${m.id}_mid`]) || 0;
+                const endVal = parseFloat(monthData.contributions[`${m.id}_end`]) || 0;
+                tableRows.push([
+                    m.name,
+                    m.phone,
+                    `Ksh ${midVal.toLocaleString()}`,
+                    `Ksh ${endVal.toLocaleString()}`
+                ]);
+            });
+
+            // Generate AutoTable
+            doc.autoTable({
+                startY: 60,
+                head: [['Contributor Name', 'Phone Number', 'Mid-Month Contribution', 'End-Month Contribution']],
+                body: tableRows,
+                theme: 'grid',
+                headStyles: { fillColor: [44, 62, 80] },
+                styles: { fontSize: 10, cellPadding: 5 }
+            });
+
+            // Save PDF File
+            doc.save(`merry_go_round_${currentMonth.replace(' ', '_')}_report.pdf`);
+        }
+
+        window.onload = function() {
+            checkAuth();
+        };
+    </script>
+</body>
+</html>
