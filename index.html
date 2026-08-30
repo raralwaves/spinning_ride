@@ -57,7 +57,8 @@
         .slot-box h4 { color: var(--primary); margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; }
 
         .amount-display { font-size: 1.1rem; color: var(--success); font-weight: bold; margin-top: 0.5rem; }
-        .contrib-input { width: 100px; padding: 0.3rem 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
+        .contrib-input, .phone-input { width: 140px; padding: 0.3rem 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
+        .phone-input { width: 160px; }
 
         .save-notification { background: #d4edda; color: #155724; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; text-align: center; font-weight: bold; display: none; }
 
@@ -79,7 +80,7 @@
         <!-- LOGIN SCREEN -->
         <div id="login-screen" class="card">
             <h2>Secretary Admin Login</h2>
-            <p style="margin: 0.5rem 0 1rem; color: #666; font-size: 0.9rem;">Designed by<code>Shati</code></p>
+            <p style="margin: 0.5rem 0 1rem; color: #666; font-size: 0.9rem;">Designed by <code>Shati</code></p>
             <form id="login-form" onsubmit="handleLogin(event)">
                 <div class="form-group">
                     <label for="admin-password">Password</label>
@@ -105,7 +106,7 @@
                 <button class="btn-primary" onclick="openAddMemberModal()">+ Add Member Directory</button>
             </div>
 
-            <div id="save-alert" class="save-notification">Records for <span class="current-month-label">July 2026</span> successfully saved!</div>
+            <div id="save-alert" class="save-notification">Records successfully saved!</div>
 
             <!-- Quick Stats -->
             <div class="stats-grid">
@@ -160,15 +161,15 @@
     </div>
 
     <script>
-        let db = JSON.parse(localStorage.getItem('merryGoRoundDBV5')) || {
+        let db = JSON.parse(localStorage.getItem('merryGoRoundDBV6')) || {
             isAuthenticated: false,
             members: [
-                { id: 1, name: "Ruth Lichungu", phone: "0711111111" },
-                { id: 2, name: "Rosa Oduor", phone: "0722222222" },
-                { id: 3, name: "Esther Muchanji", phone: "0733333333" },
-                { id: 4, name: "Vanon Shati", phone: "0744444444" },
-                { id: 5, name: "Wilkister Muduwa", phone: "0755555555" },
-                { id: 6, name: "Naomi Belesi", phone: "0766666666" }
+                { id: 1, name: "Ruth Lichungu", phone: "0745277355" },
+                { id: 2, name: "Rosa Oduor", phone: "0700000000" },
+                { id: 3, name: "Esther Muchanji", phone: "0700000000" },
+                { id: 4, name: "Vanon Shati", phone: "0714584402" },
+                { id: 5, name: "Wilkister Muduwa", phone: "0700000000" },
+                { id: 6, name: "Naomi Belesi", phone: "0700000000" }
             ],
             monthlyRecords: {
                 "July 2026": { midBeneficiary: 1, endBeneficiary: 2, contributions: {} },
@@ -182,7 +183,7 @@
         let currentMonth = "July 2026";
 
         function saveDB() {
-            localStorage.setItem('merryGoRoundDBV5', JSON.stringify(db));
+            localStorage.setItem('merryGoRoundDBV6', JSON.stringify(db));
         }
 
         function handleLogin(e) {
@@ -282,7 +283,7 @@
                 </div>
             `;
 
-            // Render Contribution Tracker Table with Editable Input fields
+            // Render Contribution Tracker Table with Editable Inputs for both Phone & Amounts
             const tbody = document.getElementById('members-table-body');
             tbody.innerHTML = '';
 
@@ -296,7 +297,9 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><strong>${member.name}</strong></td>
-                    <td>${member.phone}</td>
+                    <td>
+                        <input type="text" class="phone-input" value="${member.phone || ''}" oninput="updateMemberPhone(${member.id}, this.value)" placeholder="Phone number">
+                    </td>
                     <td>
                         <input type="number" class="contrib-input" placeholder="0" value="${midVal}" oninput="updateContribution(${member.id}, 'mid', this.value)"> Ksh
                     </td>
@@ -321,6 +324,15 @@
             saveDB();
         }
 
+        function updateMemberPhone(memberId, phoneVal) {
+            const member = db.members.find(m => m.id === memberId);
+            if (member) {
+                member.phone = phoneVal;
+                saveDB();
+                document.getElementById('save-alert').style.display = 'none';
+            }
+        }
+
         function updateContribution(memberId, slot, val) {
             const key = `${memberId}_${slot}`;
             if (val === '' || isNaN(val)) {
@@ -328,7 +340,6 @@
             } else {
                 db.monthlyRecords[currentMonth].contributions[key] = parseFloat(val);
             }
-            // Hide notification if user modifies fields after saving
             document.getElementById('save-alert').style.display = 'none';
             updateLiveTotals();
         }
